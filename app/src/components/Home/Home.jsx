@@ -1,396 +1,328 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import TopStatsAndFilters from "../Elements/TopStatsAndFilters";
+import Loading from "../Elements/Loading";
+import { FiLock, FiTrash, FiX, FiXCircle } from "react-icons/fi";
+import { useSelector } from "react-redux";
 
-const netIcons = {
-  'فودافون': (
-    <svg viewBox="0 0 100 100" className="w-8 h-8 mb-1">
-      <circle cx="50" cy="50" r="45" fill="#e60000" />
-      <path d="M50 20 C35 20 25 32 25 48 C25 65 38 78 55 78 C68 78 75 68 75 58 C75 48 65 42 55 42 C48 42 42 46 42 52 C42 58 48 62 55 62 C60 62 65 58 65 54 C65 50 60 48 55 48 C50 48 45 52 45 56" fill="none" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" />
-    </svg>
-  ),
-  'أورنج': (
-    <svg viewBox="0 0 100 100" className="w-8 h-8 mb-1">
-      <rect x="5" y="5" width="90" height="90" rx="15" fill="#ff7900" />
-      <rect x="25" y="65" width="50" height="12" fill="#ffffff" />
-    </svg>
-  ),
-  'اتصالات': (
-    <svg viewBox="0 0 100 100" className="w-8 h-8 mb-1">
-      <circle cx="50" cy="50" r="45" fill="#719e19" />
-      <text x="50%" y="62%" fontSize="45" fontWeight="bold" fill="#ffffff" textAnchor="middle">e&</text>
-    </svg>
-  ),
-  'وي': (
-    <svg viewBox="0 0 100 100" className="w-8 h-8 mb-1">
-      <circle cx="50" cy="50" r="45" fill="#5e2750" />
-      <text x="50%" y="65%" fontSize="40" fontWeight="bold" fill="#ffffff" textAnchor="middle">we</text>
-    </svg>
-  )
-};
+export default function Home() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [transactionId, setTransactionId] = useState(null);
+  const [search, setSearch] = useState("");
+  const { isAuthenticated, role } = useSelector((state) => state.user);
 
-export default function WalletManager() {
-  const [transactions, setTransactions] = useState(() => {
-    return JSON.parse(localStorage.getItem('vf_cash_txs')) || [];
-  });
-  
-  const [walletBalance, setWalletBalance] = useState(() => {
-    return parseFloat(localStorage.getItem('vf_wallet_balance')) || 0;
+  const [editFormData, setEditFormData] = useState({
+    amount: "",
+    sender: "",
+    notes: "",
+    type: "",
   });
 
-  const [selectedNet, setSelectedNet] = useState('فودافون');
-  
-  const [type, setType] = useState('إيداع');
-  const [datetime, setDatetime] = useState('');
-  const [amount, setAmount] = useState(0);
-  const [profit, setProfit] = useState(0);
-  const [notes, setNotes] = useState('');
-
-  const [monthFilter, setMonthFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [netFilter, setNetFilter] = useState('');
+  const fetchTransactions = async () => {
+    try {
+      const response = await axios.get("http://localhost:3000/transaction");
+      setTransactions(response.data.allTransactions);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    setDatetime(now.toISOString().slice(0, 16));
-    setMonthFilter(new Date().toISOString().slice(0, 7));
+    fetchTransactions();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('vf_cash_txs', JSON.stringify(transactions));
-  }, [transactions]);
+  const filterTransactions = transactions.filter((item) =>
+    item.sender.toLowerCase().includes(search.toLowerCase()),
+  );
 
-  useEffect(() => {
-    localStorage.setItem('vf_wallet_balance', walletBalance);
-  }, [walletBalance]);
+  const handleEditClick = (transaction) => {
+    setTransactionId(transaction._id);
+    setEditFormData({
+      amount: transaction.amount ?? "",
+      sender: transaction.sender ?? "",
+      notes: transaction.notes ?? "",
+      type: transaction.type ?? "received",
+    });
+  };
 
-  const updateWalletBalance = () => {
-    const input = prompt("أدخل رصيد محفظتك الحالي الحقيقي (بالجنيه):", walletBalance);
-    if (input !== null && !isNaN(input) && input.trim() !== "") {
-      setWalletBalance(parseFloat(input));
+  const handleSaveClick = async () => {
+    if (window.confirm("Are You Sure To Update?")) {
+      try {
+        await axios.put("http://localhost:3000/transaction", {
+          ...editFormData,
+          transactionId,
+        });
+        setTransactionId(null);
+        fetchTransactions();
+      } catch (error) {
+        console.error("Error updating transaction:", error);
+      }
     }
   };
 
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    const parsedAmount = parseFloat(amount) || 0;
-    const parsedProfit = parseFloat(profit) || 0;
+  const handleDelete = async (transactionId) => {
+    if (window.confirm("Are You Sure To Delete?")) {
+      try {
+        const response = await axios.delete(
+          `http://localhost:3000/transaction/${transactionId}`,
+        );
+        console.log(response.data);
 
-    const newTx = {
-      id: Date.now(),
-      network: selectedNet,
-      type,
-      datetime,
-      amount: parsedAmount,
-      profit: parsedProfit,
-      notes
-    };
-
-    let updatedBalance = walletBalance;
-    if (type === 'إيداع') {
-      updatedBalance -= parsedAmount;
-    } else if (type === 'سحب') {
-      updatedBalance += parsedAmount;
-    }
-
-    setWalletBalance(updatedBalance);
-    setTransactions([newTx, ...transactions]);
-
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    setDatetime(now.toISOString().slice(0, 16));
-    setAmount(0);
-    setProfit(0);
-    setNotes('');
-  };
-
-  const deleteTx = (id) => {
-    if (window.confirm('هل أنت تأكد من حذف هذه المعاملة؟')) {
-      setTransactions(transactions.filter(t => t.id !== id));
+        fetchTransactions();
+      } catch (error) {
+        console.error("Error deleting transaction:", error);
+      }
     }
   };
 
-  const resetFilters = () => {
-    setDateFilter('');
-    setNetFilter('');
+  // تم إضافة كلمة return هنا
+  if (loading) return <Loading />;
+
+  const inputClass =
+    "w-full min-w-28 rounded-lg border border-gray-200 p-2.5 text-sm text-gray-800 outline-none focus:border-gray-600";
+
+  // تم نقل الدالة خارج الـ map لتحسين الأداء
+  const formatDate = (isoString) => {
+    if (!isoString) return "—";
+    return new Date(isoString).toLocaleString("en-GB", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
-
-  const formatDate = (dtString) => {
-    const dt = new Date(dtString);
-    return dt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
-  };
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  let monthlyProfit = 0;
-  let dailyProfit = 0;
-  let dailyCount = 0;
-  let dailyDeposit = 0;
-  let dailyWithdraw = 0;
-
-  transactions.forEach(t => {
-    const txDate = t.datetime.slice(0, 10);
-    const txMonth = t.datetime.slice(0, 7);
-
-    if (monthFilter && txMonth === monthFilter) {
-      monthlyProfit += t.profit;
-    }
-
-    if (txDate === todayStr) {
-      dailyProfit += t.profit;
-      dailyCount++;
-      if (t.type === 'إيداع') dailyDeposit += t.amount;
-      if (t.type === 'سحب') dailyWithdraw += t.amount;
-    }
-  });
-
-  const filteredTransactions = transactions.filter(t => {
-    let match = true;
-    if (dateFilter && !t.datetime.startsWith(dateFilter)) match = false;
-    if (netFilter && t.network !== netFilter) match = false;
-    return match;
-  });
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 p-5 font-sans" dir="rtl">
-      <div className="max-w-[950px] mx-auto">
-        
-        {/* Header */}
-        <header className="bg-gray-900 text-white p-5 rounded-xl text-center mb-5 shadow-md">
-          <h1 className="text-xl font-bold">نظام إدارة المحافظ الإلكترونية والأرباح</h1>
-        </header>
-
-        {/* Wallet Banner */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-700 text-white p-5 rounded-xl mb-5 flex justify-between items-center flex-wrap gap-4 shadow-lg">
-          <div>
-            <h3 className="text-sm text-gray-300 mb-1">رصيد المحفظة الحالي:</h3>
-            <div className="text-3xl font-bold text-green-400">{walletBalance.toFixed(2)} جنيه</div>
-          </div>
-          <button 
-            className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold transition duration-200"
-            onClick={updateWalletBalance}
+    <main className="min-h-screen bg-gray-50 p-5 text-gray-800">
+      <TopStatsAndFilters />
+      <div className=" w-full flex justify-center my-3">
+        <div className="relative text-gray-600">
+          <input
+            type="text"
+            name="serch"
+            placeholder="Search"
+            onChange={(e) => setSearch(e.target.value)}
+            value={search}
+            className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none"
+          />
+          <button
+            type="submit"
+            onClick={() => setSearch("")}
+            className="absolute right-0 top-0 mt-3 mr-4 cursor-pointer"
           >
-            تعديل رصيد المحفظة
+            {search.length > 0 ? (
+              <FiXCircle />
+            ) : (
+              <svg
+                className="h-4 w-4 fill-current"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlnsXlink="http://www.w3.org/1999/xlink"
+                version="1.1"
+                id="Capa_1"
+                x="0px"
+                y="0px"
+                viewBox="0 0 56.966 56.966"
+                style={{ enableBackground: "new 0 0 56.966 56.966" }}
+                xmlSpace="preserve"
+                width="512px"
+                height="512px"
+              >
+                <path d="M55.146,51.887L41.588,37.786c3.486-4.144,5.396-9.358,5.396-14.786c0-12.682-10.318-23-23-23s-23,10.318-23,23  s10.318,23,23,23c4.761,0,9.298-1.436,13.177-4.162l13.661,14.208c0.571,0.593,1.339,0.92,2.162,0.92  c0.779,0,1.518-0.297,2.079-0.837C56.255,54.982,56.293,53.08,55.146,51.887z M23.984,6c9.374,0,17,7.626,17,17s-7.626,17-17,17  s-17-7.626-17-17S14.61,6,23.984,6z" />
+              </svg>
+            )}
           </button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          
-          {/* New Transaction Form */}
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-            <h2 className="mb-4 text-red-600 font-bold text-lg border-b border-gray-100 pb-2">تسجيل معاملة جديدة</h2>
-            <form onSubmit={handleFormSubmit}>
-              
-              <div className="mb-3">
-                <label className="block mb-1 font-bold text-sm">اختر الشبكة:</label>
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  {Object.keys(netIcons).map((net) => (
-                    <div
-                      key={net}
-                      className={`border-2 rounded-lg p-2 text-center cursor-pointer flex flex-col items-center justify-center transition-all ${
-                        selectedNet === net 
-                          ? 'border-red-600 bg-red-50 shadow-sm' 
-                          : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setSelectedNet(net)}
-                    >
-                      {netIcons[net]}
-                      <span className="text-xs font-bold">{net}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="block mb-1 font-bold text-sm">نوع المعاملة</label>
-                <select 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-red-600 text-sm bg-white"
-                  value={type} 
-                  onChange={(e) => setType(e.target.value)} 
-                  required
-                >
-                  <option value="إيداع">إيداع (خصم من المحفظة)</option>
-                  <option value="سحب">سحب (إضافة للمحفظة)</option>
-                  <option value="استعلام">استعلام</option>
-                </select>
-              </div>
-
-              <div className="mb-3">
-                <label className="block mb-1 font-bold text-sm">التاريخ والوقت</label>
-                <input 
-                  type="datetime-local" 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-red-600 text-sm"
-                  value={datetime} 
-                  onChange={(e) => setDatetime(e.target.value)} 
-                  required 
-                />
-              </div>
-
-              <div className="mb-3">
-                <label className="block mb-1 font-bold text-sm">المبلغ (جنيه)</label>
-                <input 
-                  type="number" 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-red-600 text-sm"
-                  min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required 
-                />
-              </div>
-
-              <div className="mb-3">
-                <label className="block mb-1 font-bold text-sm">الربح / العمولة (جنيه)</label>
-                <input 
-                  type="number" 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-red-600 text-sm"
-                  min="0" step="0.01" value={profit} onChange={(e) => setProfit(e.target.value)} required 
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block mb-1 font-bold text-sm">ملاحظات (اختياري)</label>
-                <input 
-                  type="text" 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-red-600 text-sm"
-                  value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="رقم العميل أو اسم الشخص" 
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition duration-200"
-              >
-                حفظ المعاملة
-              </button>
-            </form>
-          </div>
-
-          {/* Stats Card */}
-          <div className="bg-red-50/50 p-5 rounded-xl shadow-sm border border-gray-200 border-r-4 border-r-red-600">
-            <h2 className="mb-4 text-red-600 font-bold text-lg border-b border-gray-200 pb-2">تقرير الأرباح والعمليات</h2>
-            
-            <div className="mb-3">
-              <label className="block mb-1 font-bold text-sm">عرض تقرير شهر معين:</label>
-              <input 
-                type="month" 
-                className="w-full p-2.5 border border-gray-200 rounded-lg outline-none bg-white text-sm"
-                value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} 
-              />
-            </div>
-
-            <div className="flex justify-between items-center py-2.5 border-b border-dashed border-gray-200">
-              <span className="text-sm">أرباح الشهر المحدد:</span>
-              <span className="font-bold text-green-700 text-base">{monthlyProfit.toFixed(2)} جنيه</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-b border-dashed border-gray-200">
-              <span className="text-sm">إجمالي أرباح اليوم:</span>
-              <span className="font-bold text-green-700 text-base">{dailyProfit.toFixed(2)} جنيه</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-b border-dashed border-gray-200">
-              <span className="text-sm">عدد عمليات اليوم:</span>
-              <span className="font-bold text-base">{dailyCount}</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-b border-dashed border-gray-200">
-              <span className="text-sm">إجمالي إيداعات اليوم:</span>
-              <span className="font-bold text-base">{dailyDeposit.toFixed(2)} جنيه</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5">
-              <span className="text-sm">إجمالي سحوبات اليوم:</span>
-              <span className="font-bold text-base">{dailyWithdraw.toFixed(2)} جنيه</span>
-            </div>
-          </div>
-
-          {/* Transactions Table & Filters */}
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 md:col-span-2">
-            <h2 className="mb-4 text-red-600 font-bold text-lg border-b border-gray-100 pb-2">سجل المعاملات والبحث</h2>
-            
-            <div className="flex gap-3 mb-4 flex-wrap">
-              <div className="flex-1 min-w-[140px]">
-                <label className="block mb-1 font-bold text-sm">تصفية حسب اليوم:</label>
-                <input 
-                  type="date" 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none text-sm"
-                  value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} 
-                />
-              </div>
-              <div className="flex-1 min-w-[140px]">
-                <label className="block mb-1 font-bold text-sm">تصفية حسب الشبكة:</label>
-                <select 
-                  className="w-full p-2.5 border border-gray-200 rounded-lg outline-none bg-white text-sm"
-                  value={netFilter} onChange={(e) => setNetFilter(e.target.value)}
-                >
-                  <option value="">جميع الشبكات</option>
-                  {Object.keys(netIcons).map(net => (
-                    <option key={net} value={net}>{net}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="self-end">
-                <button 
-                  type="button" 
-                  onClick={resetFilters} 
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition duration-200"
-                >
-                  إعادة ضبط
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-right text-sm">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-600">
-                    <th className="p-2.5 border-b border-gray-200">التاريخ والوقت</th>
-                    <th className="p-2.5 border-b border-gray-200">الشبكة</th>
-                    <th className="p-2.5 border-b border-gray-200">النوع</th>
-                    <th className="p-2.5 border-b border-gray-200">المبلغ</th>
-                    <th className="p-2.5 border-b border-gray-200">الربح</th>
-                    <th className="p-2.5 border-b border-gray-200">ملاحظات</th>
-                    <th className="p-2.5 border-b border-gray-200">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="text-center p-4 text-gray-500">لا توجد معاملات مسجلة</td>
-                    </tr>
-                  ) : (
-                    filteredTransactions.map(tx => {
-                      let badgeColor = 'bg-sky-500';
-                      if (tx.type === 'إيداع') badgeColor = 'bg-emerald-600';
-                      if (tx.type === 'سحب') badgeColor = 'bg-red-600';
-
-                      return (
-                        <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-2.5">{formatDate(tx.datetime)}</td>
-                          <td className="p-2.5">
-                            <span className="inline-flex items-center gap-1.5 font-bold">
-                              {netIcons[tx.network]}
-                              {tx.network}
-                            </span>
-                          </td>
-                          <td className="p-2.5">
-                            <span className={`px-2 py-0.5 rounded text-white text-xs ${badgeColor}`}>{tx.type}</span>
-                          </td>
-                          <td className="p-2.5">{tx.amount.toFixed(2)} ج.م</td>
-                          <td className="p-2.5 text-emerald-700 font-bold">{tx.profit.toFixed(2)} ج.م</td>
-                          <td className="p-2.5">{tx.notes || '-'}</td>
-                          <td className="p-2.5">
-                            <button 
-                              className="bg-red-700 hover:bg-red-800 text-white px-2 py-1 rounded text-xs transition duration-200"
-                              onClick={() => deleteTx(tx.id)}
-                            >
-                              حذف
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-
-        </div>
-
       </div>
-    </div>
+
+      <div className="mx-auto max-w-7xl">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 border-b border-gray-100 pb-2 text-lg font-bold text-gray-800">
+            Transaction History
+          </h2>
+
+          <div className="-mx-5 overflow-x-auto px-5">
+            <table className="min-w-175 w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-gray-700 text-gray-50">
+                  {[
+                    "Date & Time",
+                    "Sender",
+                    "Type",
+                    "Amount",
+                    "Profit",
+                    "Notes",
+                    role == "admin" && "Actions",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="border-b border-gray-200 p-2.5 whitespace-nowrap "
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filterTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="p-4 text-center text-gray-500">
+                      No transactions recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  filterTransactions.map((item) => {
+                    const isEditing = transactionId === item._id;
+                    const badge =
+                      item.type === "received"
+                        ? "bg-emerald-600"
+                        : item.type === "send"
+                          ? "bg-red-600"
+                          : "bg-sky-500";
+
+                    return (
+                      <tr
+                        key={item._id}
+                        className="border-b border-gray-100 hover:bg-gray-50"
+                      >
+                        <td className="p-2.5">{formatDate(item.receivedAt)}</td>
+                        <td className="p-2.5 font-bold">
+                          {isEditing ? (
+                            <input
+                              name="sender"
+                              value={editFormData.sender}
+                              onChange={(event) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  sender: event.target.value,
+                                })
+                              }
+                              className={inputClass}
+                            />
+                          ) : (
+                            item.sender
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          {isEditing ? (
+                            <select
+                              name="type"
+                              value={editFormData.type}
+                              onChange={(event) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  type: event.target.value,
+                                })
+                              }
+                              className={inputClass}
+                            >
+                              <option defaultChecked value="received">
+                                Received
+                              </option>
+                              <option value="send">Sent</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`rounded px-2 py-0.5 text-xs text-white ${badge}`}
+                            >
+                              {item.type}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              name="amount"
+                              value={editFormData.amount}
+                              onChange={(event) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  amount: event.target.value,
+                                })
+                              }
+                              className={inputClass}
+                            />
+                          ) : (
+                            <p>
+                              {item.type == "send" ? "-" : "+"}{" "}
+                              {Number(item.amount || 0).toFixed(2)} EGP
+                            </p>
+                          )}
+                        </td>
+                        <td
+                          className={`p-2.5 font-bold ${item.type == "send" ? "text-gray-700" : "text-emerald-600"} `}
+                        >
+                          {item.type == "send"
+                            ? 0.0
+                            : Number(item.profit || 0).toFixed(2)}{" "}
+                          EGP
+                        </td>
+                        <td className=" p-2.5 ">
+                          {isEditing ? (
+                            <input
+                              name="notes"
+                              value={editFormData.notes}
+                              onChange={(event) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  notes: event.target.value,
+                                })
+                              }
+                              className={inputClass}
+                            />
+                          ) : (
+                            <p> {item.notes || "—"}</p>
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          <div className="flex gap-2">
+                            {role == "admin" &&
+                              (isEditing ? (
+                                <>
+                                  <button
+                                    onClick={handleSaveClick}
+                                    className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setTransactionId(null)}
+                                    className="rounded-lg bg-gray-600 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleEditClick(item)}
+                                    className="cursor-pointer rounded-lg bg-gray-600 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(item._id)}
+                                    className="rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

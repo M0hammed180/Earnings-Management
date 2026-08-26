@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// const userRoute = require("./controllers/users.controller");
+const userRoute = require("./routes/users.route");
 const transactionRoute = require("./routes/transaction.route");
 
 // global error handler
@@ -23,7 +23,7 @@ app.use((error, req, res, next) => {
 });
 
 //routes
-// app.use("/user", userRoute);
+app.use("/user", userRoute);
 app.use("/transaction", transactionRoute);
 
 mongoose
@@ -35,6 +35,6 @@ mongoose
     console.log(`error with connect db is ${e}`);
   });
 
-app.listen(3000, "0.0.0.0", () => {
+app.listen(3000, () => {
   console.log("Server running on port 3000");
 });

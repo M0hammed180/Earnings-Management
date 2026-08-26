@@ -1,26 +1,18 @@
 const users = require("../models/userSchema");
 const asyncWrapper = require("../middleware/asyncWrapper");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const createUser = asyncWrapper(async (req, res) => {
-  userName = req.body.userNmae;
-  password = req.body.password;
-  phone = req.body.phone;
-  role = req.body.role;
-  monthsNumber = req.body.monthsNumber;
-
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const { userName, name, password, phone, expiresAt, role } = req.body;
 
   const user = await users.create({
-    userName,
-    role,
+    username: userName,
+    name: name || userName,
+    password: await bcrypt.hash(password, 10),
     phone,
-    password: hashedPassword,
-    expiresAt: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000 * Number(monthsNumber),
-    ),
+    role,
+    expiresAt,
   });
 
   res.status(201).json({
@@ -31,10 +23,10 @@ const createUser = asyncWrapper(async (req, res) => {
 });
 
 const login = asyncWrapper(async (req, res) => {
-  userNmae = req.body.userNmae;
-  password = req.body.password;
+  const username = req.body.userName;
+  const password = req.body.password;
 
-  const user = await users.findOne({ userNmae });
+  const user = await users.findOne({ username });
 
   if (!user) {
     return res.status(404).json({
@@ -52,23 +44,30 @@ const login = asyncWrapper(async (req, res) => {
     });
   }
 
+  if (user.expiresAt && user.expiresAt < new Date()) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has expired",
+    });
+  }
+
   return res.status(200).json({
     success: true,
     message: "Login successful",
-    token,
+    user,
   });
 });
 
 const edit = asyncWrapper(async (req, res) => {
-  const { userId, userName, phone, password } = req.body;
+  const { userId, username, phone, name, role, expiresAt } = req.body;
+
   const update = {
-    name,
+    username,
     phone,
+    name,
+    role,
+    expiresAt,
   };
-  if (password) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    update.password = hashedPassword;
-  }
 
   const editedUser = await users.findByIdAndUpdate(userId, update, {
     new: true,
@@ -82,13 +81,25 @@ const edit = asyncWrapper(async (req, res) => {
   });
 });
 
-const showAllUsers = asyncWrapper(async (req, res) => {
-  const users = await users.find();
+const deleteUser = asyncWrapper(async (req, res) => {
+  const { userId } = req.params;
+
+  const deletedUser = await users.findByIdAndDelete(userId);
 
   return res.status(200).json({
     success: true,
-    users,
+    message: "User deleted successfully",
+    user: deletedUser,
   });
 });
 
-module.exports = { createUser, login, edit, showAllUsers };
+const showAllUsers = asyncWrapper(async (req, res) => {
+  const allUsers = await users.find({});
+
+  return res.status(200).json({
+    success: true,
+    allUsers,
+  });
+});
+
+module.exports = { createUser, login, edit, showAllUsers, deleteUser };
