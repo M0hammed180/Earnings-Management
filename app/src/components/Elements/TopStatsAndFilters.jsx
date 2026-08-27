@@ -8,7 +8,7 @@ export default function BalanceAndProfit() {
   const fetchStats = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/transaction/stats",
+        "https://earnings-management-production.up.railway.app/transaction/stats",
       );
       setData(response.data.data);
     } catch (error) {
