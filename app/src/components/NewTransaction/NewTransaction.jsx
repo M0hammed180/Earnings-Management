@@ -38,7 +38,7 @@ export default function NewTransaction() {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     try {
-      await axios.post("http://localhost:3000/transaction", transaction);
+      await axios.post("https://earnings-management-production.up.railway.app/transaction", transaction);
       navigate(-1);
     } catch (error) {
       console.error("Error updating transaction:", error);

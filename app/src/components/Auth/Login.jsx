@@ -17,11 +17,10 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:3000/user/login", {
+      const response = await axios.post("https://earnings-management-production.up.railway.app/user/login", {
         userName,
         password,
       });
-      console.log(response.data);
       dispatch(setUserData(response.data.user));
       navigate("/");
     } catch (error) {

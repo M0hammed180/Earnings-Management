@@ -17,7 +17,7 @@ export default function Users() {
   });
 
   const fetchUsers = async () => {
-    const response = await axios.get("http://localhost:3000/user");
+    const response = await axios.get("https://earnings-management-production.up.railway.app/user");
     setUsers(response.data.allUsers);
   };
 
@@ -44,7 +44,7 @@ export default function Users() {
 
   const handleSaveClick = async () => {
     try {
-      await axios.put("http://localhost:3000/user", {
+      await axios.put("https://earnings-management-production.up.railway.app/user", {
         ...editFormData,
         userId: editUserId,
       });
@@ -57,7 +57,7 @@ export default function Users() {
 
   const handleDelete = async (userId) => {
     try {
-      await axios.delete(`http://localhost:3000/user/${userId}`);
+      await axios.delete(`https://earnings-management-production.up.railway.app/user/${userId}`);
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);

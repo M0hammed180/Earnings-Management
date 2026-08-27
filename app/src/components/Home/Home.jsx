@@ -21,7 +21,7 @@ export default function Home() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/transaction");
+      const response = await axios.get("https://earnings-management-production.up.railway.app/transaction");
       setTransactions(response.data.allTransactions);
     } catch (error) {
       console.log(error);
@@ -51,7 +51,7 @@ export default function Home() {
   const handleSaveClick = async () => {
     if (window.confirm("Are You Sure To Update?")) {
       try {
-        await axios.put("http://localhost:3000/transaction", {
+        await axios.put("https://earnings-management-production.up.railway.app/transaction", {
           ...editFormData,
           transactionId,
         });
@@ -67,9 +67,8 @@ export default function Home() {
     if (window.confirm("Are You Sure To Delete?")) {
       try {
         const response = await axios.delete(
-          `http://localhost:3000/transaction/${transactionId}`,
+          `https://earnings-management-production.up.railway.app/transaction/${transactionId}`,
         );
-        console.log(response.data);
 
         fetchTransactions();
       } catch (error) {

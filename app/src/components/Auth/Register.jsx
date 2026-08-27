@@ -33,8 +33,7 @@ export default function Register() {
     setErrorMessage("");
 
     try {
-      const response = await axios.post("http://localhost:3000/user/add", user);
-      console.log(response.data);
+      const response = await axios.post("https://earnings-management-production.up.railway.app/user/add", user);
       setUser({
         userName: "",
         password: "",
