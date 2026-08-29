@@ -9,7 +9,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
+  const myId = useSelector((state) => state.user.userId);
   const [user, setUser] = useState({
     userName: "",
     password: "",
@@ -33,7 +33,10 @@ export default function Register() {
     setErrorMessage("");
 
     try {
-      const response = await axios.post("https://earnings-management-production.up.railway.app/user/add", user);
+      const response = await axios.post(
+        "https://earnings-management-production.up.railway.app/user/add",
+        { ...user, myId },
+      );
       setUser({
         userName: "",
         password: "",

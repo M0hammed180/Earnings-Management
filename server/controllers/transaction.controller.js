@@ -71,7 +71,7 @@ const addTransaction = asyncWrapper(async (req, res) => {
 });
 
 const edit = asyncWrapper(async (req, res) => {
-  const { amount, sender, notes, type, transactionId ,myId} = req.body;
+  const { amount, sender, notes, type, transactionId, myId } = req.body;
 
   const userIsAdmin = await users.findById(myId, "role");
 
@@ -106,7 +106,7 @@ const edit = asyncWrapper(async (req, res) => {
 });
 
 const deleteTransaction = asyncWrapper(async (req, res) => {
-  const { transactionId } = req.params;
+  const { transactionId, myId } = req.params;
 
   const userIsAdmin = await users.findById(myId, "role");
 

@@ -10,7 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [transactionId, setTransactionId] = useState(null);
   const [search, setSearch] = useState("");
-  const { isAuthenticated, role } = useSelector((state) => state.user);
+  const { isAuthenticated, role, userId } = useSelector((state) => state.user);
 
   const [editFormData, setEditFormData] = useState({
     amount: "",
@@ -21,7 +21,9 @@ export default function Home() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get("https://earnings-management-production.up.railway.app/transaction");
+      const response = await axios.get(
+        "https://earnings-management-production.up.railway.app/transaction",
+      );
       setTransactions(response.data.allTransactions);
     } catch (error) {
       console.log(error);
@@ -51,10 +53,14 @@ export default function Home() {
   const handleSaveClick = async () => {
     if (window.confirm("Are You Sure To Update?")) {
       try {
-        await axios.put("https://earnings-management-production.up.railway.app/transaction", {
-          ...editFormData,
-          transactionId,
-        });
+        await axios.put(
+          "https://earnings-management-production.up.railway.app/transaction",
+          {
+            ...editFormData,
+            transactionId,
+            myId: userId,
+          },
+        );
         setTransactionId(null);
         fetchTransactions();
       } catch (error) {
@@ -67,7 +73,7 @@ export default function Home() {
     if (window.confirm("Are You Sure To Delete?")) {
       try {
         const response = await axios.delete(
-          `https://earnings-management-production.up.railway.app/transaction/${transactionId}`,
+          `https://earnings-management-production.up.railway.app/transaction/${transactionId}/${userId}`,
         );
 
         fetchTransactions();

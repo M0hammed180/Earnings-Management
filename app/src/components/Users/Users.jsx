@@ -2,8 +2,10 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import Loading from "../Elements/Loading";
 import { FiXCircle } from "react-icons/fi";
+import { useSelector } from "react-redux";
 
 export default function Users() {
+  const myId = useSelector((state) => state.user.userId);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [editUserId, setEditUserId] = useState(null);
@@ -17,7 +19,9 @@ export default function Users() {
   });
 
   const fetchUsers = async () => {
-    const response = await axios.get("https://earnings-management-production.up.railway.app/user");
+    const response = await axios.get(
+      "https://earnings-management-production.up.railway.app/user",
+    );
     setUsers(response.data.allUsers);
   };
 
@@ -44,10 +48,14 @@ export default function Users() {
 
   const handleSaveClick = async () => {
     try {
-      await axios.put("https://earnings-management-production.up.railway.app/user", {
-        ...editFormData,
-        userId: editUserId,
-      });
+      await axios.put(
+        "https://earnings-management-production.up.railway.app/user",
+        {
+          ...editFormData,
+          userId: editUserId,
+          myId,
+        },
+      );
       setEditUserId(null);
       fetchUsers();
     } catch (error) {
@@ -57,7 +65,9 @@ export default function Users() {
 
   const handleDelete = async (userId) => {
     try {
-      await axios.delete(`https://earnings-management-production.up.railway.app/user/${userId}`);
+      await axios.delete(
+        `https://earnings-management-production.up.railway.app/user/${userId}/${myId}`,
+      );
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);

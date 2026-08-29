@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
 const createUser = asyncWrapper(async (req, res) => {
-  const { userName, name, password, phone, expiresAt, role } = req.body;
+  const { userName, name, password, phone, expiresAt, role, myId } = req.body;
 
   const user = await users.create({
     username: userName,
@@ -96,7 +96,7 @@ const edit = asyncWrapper(async (req, res) => {
 });
 
 const deleteUser = asyncWrapper(async (req, res) => {
-  const { userId } = req.params;
+  const { userId, myId } = req.params;
 
   const userIsAdmin = await users.findById(myId, "role");
 
