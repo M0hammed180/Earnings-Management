@@ -71,7 +71,16 @@ const addTransaction = asyncWrapper(async (req, res) => {
 });
 
 const edit = asyncWrapper(async (req, res) => {
-  const { amount, sender, notes, type, transactionId } = req.body;
+  const { amount, sender, notes, type, transactionId ,myId} = req.body;
+
+  const userIsAdmin = await users.findById(myId, "role");
+
+  if (userIsAdmin.role !== "admin") {
+    return res.status(500).json({
+      success: false,
+      message: "you are not admin",
+    });
+  }
 
   const update = {
     amount,
@@ -98,6 +107,15 @@ const edit = asyncWrapper(async (req, res) => {
 
 const deleteTransaction = asyncWrapper(async (req, res) => {
   const { transactionId } = req.params;
+
+  const userIsAdmin = await users.findById(myId, "role");
+
+  if (userIsAdmin.role !== "admin") {
+    return res.status(500).json({
+      success: false,
+      message: "you are not admin",
+    });
+  }
 
   const deletedTransaction = await Transaction.findByIdAndDelete(transactionId);
 

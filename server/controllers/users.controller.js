@@ -59,7 +59,17 @@ const login = asyncWrapper(async (req, res) => {
 });
 
 const edit = asyncWrapper(async (req, res) => {
-  const { userId, username, phone, name, role, expiresAt } = req.body;
+  const { myId, userId, username, phone, name, role, expiresAt, password } =
+    req.body;
+
+  const userIsAdmin = await users.findById(myId, "role");
+
+  if (userIsAdmin.role !== "admin") {
+    return res.status(500).json({
+      success: false,
+      message: "you are not admin",
+    });
+  }
 
   const update = {
     username,
@@ -68,6 +78,10 @@ const edit = asyncWrapper(async (req, res) => {
     role,
     expiresAt,
   };
+
+  if (password) {
+    update.password = await bcrypt.hash(password, 10);
+  }
 
   const editedUser = await users.findByIdAndUpdate(userId, update, {
     new: true,
@@ -83,6 +97,15 @@ const edit = asyncWrapper(async (req, res) => {
 
 const deleteUser = asyncWrapper(async (req, res) => {
   const { userId } = req.params;
+
+  const userIsAdmin = await users.findById(myId, "role");
+
+  if (userIsAdmin.role !== "admin") {
+    return res.status(500).json({
+      success: false,
+      message: "you are not admin",
+    });
+  }
 
   const deletedUser = await users.findByIdAndDelete(userId);
 
